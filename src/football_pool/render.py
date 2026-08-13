@@ -501,11 +501,16 @@ def render_site(
     write("forecast/index.html", "forecast.html", page="forecast")
     write("rules/index.html", "rules.html", page="rules")
     write("teams/index.html", "teams.html", page="teams")
-    write("weeks/index.html", "weeks.html", page="weeks", week_rows=_week_rows(ctx, rows))
+    # Weeks and Trends merged into one Season page: what happened and how it
+    # moved are one story, and six tabs was three too many for a family pool.
+    # The old addresses live in a year of group-chat links, so they forward.
+    write("weeks/index.html", "redirect.html", page="weeks", target="/season/")
+    write("trends/index.html", "redirect.html", page="trends", target="/season/")
     write(
-        "trends/index.html",
-        "trends.html",
-        page="trends",
+        "season/index.html",
+        "season.html",
+        page="season",
+        week_rows=_week_rows(ctx, rows),
         points_series=[(r["name"], r["series"]) for r in rows if r["series"]],
         rank_series=[
             (r["name"], history_mod.rank_series_for(ctx.history, r["name"]))

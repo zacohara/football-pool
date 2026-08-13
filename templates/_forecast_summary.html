@@ -1,0 +1,24 @@
+{# The forecast teaser shared by the in-season and preseason layouts of the
+   standings page. A summary, not the whole forecast: the full distributional
+   picture lives on /forecast/ so the standings page stays a scoreboard. #}
+<h2 class="section-title">Projected finish <span class="model-tag">modelled</span></h2>
+<p class="page-sub">
+  From {{ '{:,}'.format(sim_count) }} simulated seasons, conditioned on every
+  game already played. Each bar is that entry's chance of every finishing place,
+  strongest colour first.
+</p>
+
+<div class="forecast-rows">
+  {% for r in forecast.finish_rows[:3] %}
+  <a class="forecast-row" href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}" data-slug="{{ r.slug }}">
+    <span class="forecast-name">
+      {{ r.name }}<span class="badge you" data-me-only>you</span>
+    </span>
+    <span class="forecast-bar">{{ r.bar|safe }}</span>
+    <span class="forecast-odds model">{{ '%.0f%%'|format(r.probs[0] * 100) }}</span>
+  </a>
+  {% endfor %}
+</div>
+<p class="page-sub">
+  <a class="back" href="{{ '/forecast/'|url }}">Full forecast — every finish, the score ranges, and every head to head →</a>
+</p>

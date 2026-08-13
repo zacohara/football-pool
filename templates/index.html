@@ -13,14 +13,13 @@
 
 {% block content %}
 
+{# Three numbers, not five. The pool's pulse at a glance: where the season is,
+   what's at stake, and who's on top. Anything finer lives below or behind the
+   Details toggle. #}
 <section class="state" aria-label="State of the pool">
   <div class="state-cell">
     <p class="state-label">Where we are</p>
     <p class="state-value">{{ state.phase }}</p>
-  </div>
-  <div class="state-cell">
-    <p class="state-label">Games left</p>
-    <p class="state-value">{{ state.games_remaining }}<span class="unit"> / {{ state.games_played + state.games_remaining }}</span></p>
   </div>
   <div class="state-cell">
     <p class="state-label">In the pot</p>
@@ -30,31 +29,43 @@
     <p class="state-label">Leader</p>
     <p class="state-value sm">{{ state.leader.name if state.leader else '—' }}</p>
   </div>
-  <div class="state-cell">
-    <p class="state-label">Biggest riser</p>
-    <p class="state-value sm">
-      {% if state.risers %}{{ state.risers[0][0] }} <span class="unit">+{{ state.risers[0][1]|int }}</span>{% else %}—{% endif %}
-    </p>
-  </div>
 </section>
 
 <div class="page-head">
   <h1 class="page-title">Standings</h1>
+  <button class="detail-toggle" type="button" data-detail-toggle aria-pressed="false">
+    Details
+  </button>
   <p class="page-sub">
     {% if state.week %}
       Through week {{ state.week }}.
     {% else %}
       Nothing has kicked off yet — every entry is level until week 1.
     {% endif %}
-    Solid bar is banked, hatched is guaranteed by your own teams playing each
-    other, and the outline is everything still reachable.
+    <span data-detail-only>
+      Solid bar is points in the bag, hatched is locked in because your own
+      teams play each other, and the outline is the best case still on the table.
+    </span>
   </p>
-  <div class="legend">
-    <span><i class="key-banked"></i> banked</span>
-    <span><i class="key-guaranteed"></i> guaranteed</span>
-    <span><i class="key-ceiling"></i> ceiling</span>
+  <div class="legend" data-detail-only>
+    <span><i class="key-banked"></i> in the bag</span>
+    <span><i class="key-guaranteed"></i> locked in</span>
+    <span><i class="key-ceiling"></i> best case</span>
   </div>
 </div>
+
+{# Filled client-side with the viewer's own row once "who are you?" is set.
+   Server-rendered pages can't know the viewer, and the strip must never add
+   entrant links of its own — it borrows the board row's. #}
+<div class="you-strip" data-you hidden></div>
+
+{# Before a single kickoff every actual total is 0.00, so the model is the only
+   thing worth reading first: lead with it, then the picks. In season the board
+   comes first — what has happened beats what might. #}
+{% if not state.week and forecast %}
+  {% include '_forecast_summary.html' %}
+  <h2 class="section-title">The field</h2>
+{% endif %}
 
 {% if not rows %}
   <p class="empty">No entries yet. Add people to <code>seasons/{{ season.year }}/picks.yaml</code>.</p>
@@ -77,7 +88,9 @@
       <span class="row-teams">
         {% for t in r.teams %}
           <span class="team-chip {% if r.contributions.get(t, 0) > 0 %}scored{% else %}dim{% endif %}"
-                style="{{ t|chip_style }}">{{ t }}</span>
+                style="{{ t|chip_style }}"><img class="chip-logo"
+                src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt=""
+                width="14" height="14">{{ t }}</span>
         {% endfor %}
         <span class="badge you" data-me-only>you</span>
         {% if r.eliminated %}<span class="badge out">eliminated</span>{% endif %}
@@ -102,7 +115,7 @@
       {{ r.bar|safe }}
       {{ r.spark|safe }}
       <span class="row-sub">
-        next wk ≤{{ r.next_week_max|points }} · ceiling {{ r.ceiling|points }}
+        this week up to {{ r.next_week_max|points }} · best case {{ r.ceiling|points }}
       </span>
     </span>
   </a>
@@ -110,31 +123,8 @@
 </div>
 {% endif %}
 
-{% if forecast %}
-{# A summary, not the whole forecast. The full distributional picture lives on
-   /forecast/ so the standings page stays a scoreboard — what has happened —
-   rather than becoming half a model. #}
-<h2 class="section-title">Projected finish <span class="model-tag">modelled</span></h2>
-<p class="page-sub">
-  From {{ '{:,}'.format(sim_count) }} simulated seasons, conditioned on every
-  game already played. Each bar is that entry's chance of every finishing place,
-  strongest colour first.
-</p>
-
-<div class="forecast-rows">
-  {% for r in forecast.finish_rows[:3] %}
-  <a class="forecast-row" href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}" data-slug="{{ r.slug }}">
-    <span class="forecast-name">
-      {{ r.name }}<span class="badge you" data-me-only>you</span>
-    </span>
-    <span class="forecast-bar">{{ r.bar|safe }}</span>
-    <span class="forecast-odds model">{{ '%.0f%%'|format(r.probs[0] * 100) }}</span>
-  </a>
-  {% endfor %}
-</div>
-<p class="page-sub">
-  <a class="back" href="{{ '/forecast/'|url }}">Full forecast — every finish, the score ranges, and head to head →</a>
-</p>
+{% if state.week and forecast %}
+  {% include '_forecast_summary.html' %}
 {% endif %}
 
 {% if state.week_leaders %}

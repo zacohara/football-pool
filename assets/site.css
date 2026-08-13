@@ -41,6 +41,10 @@
 
   /* stadium at night */
   --field: #070b0e;
+  /* mown turf: two grass tones a whisker apart, banded every 40px so the
+     mowing stripes land exactly on the yard-line rhythm below */
+  --turf-a: #070b0e;
+  --turf-b: #0a1014;
   --surface: #111a21;
   --surface-2: #17242d;
   --chalk: #e8edf0;
@@ -70,6 +74,8 @@
   color-scheme: light;
 
   --field: #f4f1ea;
+  --turf-a: #f4f1ea;
+  --turf-b: #eeeade;
   --surface: #fffefb;
   --surface-2: #ece7dc;
   --chalk: #14181b;
@@ -109,7 +115,9 @@ body {
   background-image:
     linear-gradient(180deg, rgb(198 255 61 / 4%), transparent 55%),
     repeating-linear-gradient(90deg,
-      transparent 0 39px, rgb(232 237 240 / 3.5%) 39px 40px);
+      transparent 0 39px, rgb(232 237 240 / 3.5%) 39px 40px),
+    repeating-linear-gradient(90deg,
+      var(--turf-a) 0 40px, var(--turf-b) 40px 80px);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
 }
@@ -155,11 +163,10 @@ a { color: inherit; }
 
 .brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; }
 
-.brand-mark {
-  width: 12px; height: 26px;
-  border-radius: 2px;
-  background: var(--live);
-  box-shadow: 0 0 18px color-mix(in srgb, var(--live) 55%, transparent);
+.brand-shield {
+  width: 22px; height: 22px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--live) 45%, transparent));
 }
 
 .brand-text { display: flex; align-items: baseline; gap: 0.45rem; }
@@ -395,6 +402,9 @@ a { color: inherit; }
 
 /* --- chips and badges -------------------------------------------------- */
 .team-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
   font-family: var(--mono);
   font-size: 0.66rem;
   font-weight: 600;
@@ -1140,6 +1150,112 @@ html:active-view-transition .row { animation: none; }
   thead th { position: static; box-shadow: none; border-bottom: 1px solid var(--rule); }
   th, td { padding: 0.45rem 0.55rem; font-size: 0.8rem; }
   .footer-inner { flex-direction: column; align-items: flex-start; }
+}
+
+
+
+/* --- team logos ---------------------------------------------------------
+   The mark rides inside the chip it identifies. Colour keeps its one job:
+   a club that has scored shows in full colour, a club that has not is
+   greyed — the same rule the rest of the site already lives by. */
+.chip-logo { width: 14px; height: 14px; object-fit: contain; flex: none; }
+.chip-logo-lg { width: 18px; height: 18px; }
+.card-team { display: inline-flex; align-items: center; gap: 0.4rem; }
+.card-team .chip-logo-lg { width: 20px; height: 20px; }
+.team-chip.dim .chip-logo { filter: grayscale(1) opacity(0.65); }
+:root[data-theme='light'] .team-chip.dim .chip-logo { filter: grayscale(1) opacity(0.55); }
+
+/* --- the Details toggle -------------------------------------------------
+   The board answers "who is winning" on its own. The bar, the sparkline and
+   the ceiling maths are for whoever wants them, one tap away, remembered
+   per browser. Off is the default on purpose. */
+.page-head { position: relative; }
+.detail-toggle {
+  position: absolute;
+  right: 0;
+  top: 0.45rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  min-height: 32px;
+  cursor: pointer;
+}
+.detail-toggle:hover { color: var(--chalk); border-color: var(--edge); }
+.detail-toggle:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
+html[data-detail='on'] .detail-toggle {
+  color: var(--live);
+  border-color: color-mix(in srgb, var(--live) 40%, var(--rule));
+}
+html:not([data-detail='on']) [data-detail-only] { display: none; }
+html:not([data-detail='on']) .board .row-bars { display: none; }
+html:not([data-detail='on']) .board .row {
+  grid-template-areas: 'rank who score';
+  align-items: center;
+}
+
+/* --- the viewer's own line ----------------------------------------------
+   Filled by the client once "who are you?" is set. Answers "how am I doing"
+   before a single scroll. */
+.you-strip { margin: 0 0 0.9rem; }
+.you-strip a {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+  padding: 0.6rem 0.95rem;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--live) 28%, var(--rule));
+  border-left: 3px solid var(--live);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--chalk);
+  text-decoration: none;
+  box-shadow: var(--shadow);
+}
+.you-strip a:hover { border-color: color-mix(in srgb, var(--live) 55%, var(--rule)); }
+.you-strip .you-rank {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--live);
+}
+.you-strip .you-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+}
+.you-strip .you-pts { margin-left: auto; font-weight: 600; }
+
+/* --- reference lives in the footer -------------------------------------- */
+.footer-nav { display: flex; gap: 0.4rem; }
+.footer-nav a {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+  text-decoration: none;
+  padding: 0.55rem 0.6rem;
+}
+.footer-nav a:hover { color: var(--chalk); }
+
+@media (max-width: 640px) {
+  .chip-logo { width: 12px; height: 12px; }
+  .brand-shield { width: 19px; height: 19px; }
+  .detail-toggle { top: 0.1rem; padding: 0.4rem 0.75rem; }
+  .you-strip a { font-size: 0.72rem; gap: 0.55rem; flex-wrap: wrap; }
+  /* Tap targets: the tab row and footer links go to a comfortable height. */
+  .tabs a { padding: 0.6rem 0.55rem; font-size: 0.74rem; }
+  .footer-nav a { padding: 0.6rem 0.55rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -12,6 +12,7 @@
 export const THEME_KEY = 'pool-theme';
 export const TZ_KEY = 'pool-tz';
 export const ME_KEY = 'pool-me';
+export const DETAIL_KEY = 'pool-detail';
 export const COMPARE_KEY = 'pool-compare';
 export const DEFAULT_TZ = 'America/New_York';
 export const DEFAULT_THEME = 'dark';
@@ -170,12 +171,84 @@ function initTheme(doc, storage) {
 }
 
 /**
+ * The Details toggle on the standings page.
+ *
+ * The board's default is the glance: rank, name, teams, points. The outlook
+ * bar, the sparkline and the ceiling maths appear for whoever asks, and the
+ * choice is remembered per browser. `aria-pressed` tracks the state so the
+ * control reads correctly to a screen reader.
+ */
+function initDetail(doc, storage) {
+  const button = doc.querySelector('[data-detail-toggle]');
+  if (!button) return;
+
+  const paint = () => {
+    button.setAttribute(
+      'aria-pressed',
+      String(doc.documentElement.dataset.detail === 'on'),
+    );
+  };
+  paint();
+
+  button.addEventListener('click', () => {
+    const on = doc.documentElement.dataset.detail === 'on';
+    if (on) delete doc.documentElement.dataset.detail;
+    else doc.documentElement.dataset.detail = 'on';
+    storage.set(DETAIL_KEY, on ? 'off' : 'on');
+    paint();
+  });
+}
+
+/**
  * "This is me": one stored slug that highlights the viewer everywhere.
  *
  * Six near-identical rows on a phone is exactly where finding yourself is the
  * whole job. The choice never leaves the browser — there is no server here to
  * send it to.
  */
+/**
+ * The viewer's own line, lifted to the top of the standings.
+ *
+ * Built from the board row that already exists — the strip never adds entrant
+ * links of its own, it borrows the row's. Empty (and hidden) until "who are
+ * you?" is set, and on every page that has no board.
+ */
+function paintYouStrip(doc, slug) {
+  const strip = doc.querySelector('[data-you]');
+  if (!strip) return;
+
+  const row = slug ? doc.querySelector(`.board .row[data-slug="${slug}"]`) : null;
+  strip.textContent = '';
+  strip.hidden = !row;
+  if (!row) return;
+
+  const grab = (sel) => {
+    const el = row.querySelector(sel);
+    return el ? el.textContent.trim() : '';
+  };
+
+  const link = doc.createElement('a');
+  link.href = row.getAttribute('href');
+
+  const rank = doc.createElement('span');
+  rank.className = 'you-rank';
+  rank.textContent = `#${grab('.row-rank')}`;
+
+  const label = doc.createElement('span');
+  label.className = 'you-label';
+  label.textContent = 'your entry';
+
+  const name = doc.createElement('span');
+  name.textContent = grab('.row-name');
+
+  const pts = doc.createElement('span');
+  pts.className = 'you-pts';
+  pts.textContent = `${grab('.row-points')} pts`;
+
+  link.append(rank, label, name, pts);
+  strip.append(link);
+}
+
 function initMe(doc, storage) {
   const select = doc.querySelector('[data-me-select]');
   const stored = storage.get(ME_KEY) || '';
@@ -185,6 +258,7 @@ function initMe(doc, storage) {
     for (const el of doc.querySelectorAll('[data-slug]')) {
       el.classList.toggle('is-me', Boolean(slug) && el.dataset.slug === slug);
     }
+    paintYouStrip(doc, slug);
   };
 
   if (select) {
@@ -371,6 +445,7 @@ function initOdometer(doc, win) {
 export function init(doc = document, win = window) {
   const storage = safeStorage(win.localStorage);
   initTheme(doc, storage);
+  initDetail(doc, storage);
   // Identity first: the comparison chart opens on whoever the viewer says
   // they are, so it has to know before it paints.
   initMe(doc, storage);

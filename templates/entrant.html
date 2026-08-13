@@ -15,7 +15,7 @@
     <div class="row-teams" style="margin-top:.6rem">
       {% for t in entrant.teams %}
         <span class="team-chip {% if entrant.contributions.get(t, 0) > 0 %}scored{% else %}dim{% endif %}"
-              style="{{ t|chip_style }}">{{ t }}</span>
+              style="{{ t|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="14" height="14">{{ t }}</span>
       {% endfor %}
       <span class="badge you" data-me-only>you</span>
       {% if entrant.eliminated %}<span class="badge out">eliminated</span>{% endif %}
@@ -35,7 +35,7 @@
   {% for c in entrant.cards %}
   <div class="card team-card" style="{{ c.team|chip_style }}">
     <div class="card-head">
-      <span class="card-team">{{ c.team }}</span>
+      <span class="card-team"><img class="chip-logo chip-logo-lg" src="{{ ('/assets/logos/' ~ c.team ~ '.png')|url }}" alt="" width="20" height="20">{{ c.team }}</span>
       <span class="card-points">{{ c.points|points }}</span>
     </div>
     <p class="card-meta">

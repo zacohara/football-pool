@@ -1,16 +1,16 @@
 {% extends 'base.html' %}
 
-{% block title %}Trends · {{ season.year }} Family Pool{% endblock %}
-{% block description %}How the standings have moved all season — points and rank, week by week.{% endblock %}
+{% block title %}Season · {{ season.year }} Family Pool{% endblock %}
+{% block description %}The whole season in one place — your line against anyone's, points and rank week by week, and where the ground is gained.{% endblock %}
 
 {% block content %}
 
 <div class="page-head">
-  <h1 class="page-title">Trends</h1>
+  <h1 class="page-title">Season</h1>
   <p class="page-sub">
-    How the season has actually moved. Start with <strong>Compare</strong> to put
-    your own line against whoever you are chasing, then read the charts below it
-    for the shape of the whole field.
+    The whole season in one place. Start with <strong>Compare</strong> to put
+    your own line against whoever you are chasing, then the week-by-week
+    numbers and the shape of the whole field below it.
   </p>
 </div>
 
@@ -21,7 +21,7 @@
 <h2 class="section-title">Compare</h2>
 <p class="page-sub">
   Pick anyone to bring their line forward — as many as six at once, each in its
-  own colour. Set "who are you?" at the bottom of the page and you will open
+  own colour. Set "who are you?" at the top of the page and you will open
   here on your own line every time. Your picks are remembered on this device.
 </p>
 
@@ -47,6 +47,82 @@
   {{ svg.compare_lines(compare_ranks, weeks, 900, 300, true)|safe }}
   <p class="card-meta"><span>first place at the top</span></p>
 </div>
+
+<h2 class="section-title">Week by week</h2>
+<p class="page-sub">
+  Points scored each week, and the rank everyone held once that week finished.
+  Weeks 19 onward are the playoffs.
+</p>
+
+<h3 class="section-title">Points scored each week</h3>
+<div class="table-scroll">
+  <table>
+    <caption>Points added in each week — not the running total.</caption>
+    <thead>
+      <tr>
+        <th scope="col">Entrant</th>
+        {% for w in weeks %}<th scope="col" class="num">{{ w }}</th>{% endfor %}
+        <th scope="col" class="num">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in week_rows %}
+      <tr>
+        <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        {% for v in r.points %}
+          <td class="num">{{ '%.2f'|format(v) if v else '·' }}</td>
+        {% endfor %}
+        <td class="num">{{ r.total|points }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h3 class="section-title">Rank after each week</h3>
+<div class="table-scroll">
+  <table>
+    <caption>Where everyone stood once each week was in the books.</caption>
+    <thead>
+      <tr>
+        <th scope="col">Entrant</th>
+        {% for w in weeks %}<th scope="col" class="num">{{ w }}</th>{% endfor %}
+        <th scope="col">Trend</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in week_rows %}
+      <tr>
+        <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        {% for rank in r.ranks %}
+          <td class="num">{{ rank }}</td>
+        {% endfor %}
+        <td>{{ r.spark|safe }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if state.risers or state.fallers %}
+<h3 class="section-title">Movers in week {{ weeks[-1] }}</h3>
+<div class="stat-grid">
+  {% for name, change in state.risers %}
+  <div class="stat">
+    <p class="stat-label">Riser</p>
+    <p class="stat-value live">▲{{ change|int }}</p>
+    <p class="stat-note">{{ name }}</p>
+  </div>
+  {% endfor %}
+  {% for name, change in state.fallers %}
+  <div class="stat">
+    <p class="stat-label">Faller</p>
+    <p class="stat-value" style="color:var(--heat)">▼{{ (-change)|int }}</p>
+    <p class="stat-note">{{ name }}</p>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
 
 <h2 class="section-title">The whole field</h2>
 <p class="page-sub">
@@ -92,14 +168,14 @@
         <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
         <td>
           <span class="row-teams">
-            {% for t in r.unique_teams %}<span class="team-chip scored" style="{{ t|chip_style }}">{{ t }}</span>{% endfor %}
+            {% for t in r.unique_teams %}<span class="team-chip scored" style="{{ t|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="14" height="14">{{ t }}</span>{% endfor %}
             {% if not r.unique_teams %}<span class="badge out">none — every team is shared</span>{% endif %}
           </span>
         </td>
         <td class="num">{{ '%.2f'|format(r.leverage) }}</td>
         <td>
           <span class="row-teams">
-            {% for t in r.shared_teams %}<span class="team-chip dim" style="{{ t|chip_style }}">{{ t }}</span>{% endfor %}
+            {% for t in r.shared_teams %}<span class="team-chip dim" style="{{ t|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="14" height="14">{{ t }}</span>{% endfor %}
           </span>
         </td>
       </tr>
@@ -126,9 +202,9 @@
       {% for r in picks %}
       <tr>
         <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
-        <td><span class="team-chip scored" style="{{ r.best_team|chip_style }}">{{ r.best_team }}</span> {{ r.best_points|points }}</td>
+        <td><span class="team-chip scored" style="{{ r.best_team|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ r.best_team ~ '.png')|url }}" alt="" width="14" height="14">{{ r.best_team }}</span> {{ r.best_points|points }}</td>
         <td class="num">{{ '%.0f%%'|format(r.best_share * 100) }}</td>
-        <td><span class="team-chip dim" style="{{ r.worst_team|chip_style }}">{{ r.worst_team }}</span></td>
+        <td><span class="team-chip dim" style="{{ r.worst_team|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ r.worst_team ~ '.png')|url }}" alt="" width="14" height="14">{{ r.worst_team }}</span></td>
         <td class="num">{{ r.worst_points|points }}</td>
       </tr>
       {% endfor %}

@@ -1,0 +1,17 @@
+{# A page that has moved. Bookmarks and old group-chat links land here, so the
+   stub forwards immediately and offers the link for anything that ignores a
+   meta refresh. Deliberately not extending base.html: a chrome-less stub makes
+   the forward feel instant rather than like a page that then vanishes. #}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="0; url={{ target|url }}">
+<title>Moved · {{ season.year }} Family Pool</title>
+<meta name="robots" content="noindex">
+</head>
+<body>
+<p>This page moved to <a href="{{ target|url }}">{{ target }}</a>.</p>
+</body>
+</html>

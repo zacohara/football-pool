@@ -38,7 +38,7 @@
            is more useful than the alphabetical order of the first name. #}
         <th scope="row" data-value="{{ t.team }}">
           <span class="team-chip {% if t.points > 0 %}scored{% else %}dim{% endif %}"
-                style="{{ t.team|chip_style }}">{{ t.team }}</span>
+                style="{{ t.team|chip_style }}"><img class="chip-logo chip-logo-lg" src="{{ ('/assets/logos/' ~ t.team ~ '.png')|url }}" alt="" width="18" height="18">{{ t.team }}</span>
         </th>
         <td class="num" data-value="{{ t.lf }}">{{ '%.2f'|format(t.lf) }}</td>
         <td data-value="{{ t.w }}">{{ t.record }}</td>

@@ -194,6 +194,7 @@ def test_builds_every_expected_page(pool, game_data, tmp_path):
         "forecast/index.html",
         "teams/index.html",
         "weeks/index.html",
+        "season/index.html",
         "404.html",
         "entrant/aunt-carol/index.html",
         "entrant/cousin-mike/index.html",
@@ -268,7 +269,15 @@ def test_preseason_builds_with_no_games_played(pool, games_2025, tmp_path):
     html = (tmp_path / "index.html").read_text()
     assert "Preseason" in html
     assert "Nothing has kicked off yet" in html
-    assert "Nothing has been played yet" in (tmp_path / "weeks" / "index.html").read_text()
+    assert "Nothing has been played yet" in (tmp_path / "season" / "index.html").read_text()
+
+
+def test_weeks_and_trends_forward_to_season(pool, game_data, tmp_path):
+    """A year of group-chat links points at the old pages; they must forward."""
+    render_site(pool, game_data, tmp_path)
+    for rel in ("weeks", "trends"):
+        html = (tmp_path / rel / "index.html").read_text()
+        assert 'url=/season/' in html
 
 
 def test_a_pool_with_a_single_entrant_builds(make_season, game_data, tmp_path):
@@ -285,7 +294,7 @@ def test_mid_season_shows_the_current_week(pool, mid_season, tmp_path):
 
 def test_weeks_page_has_a_column_per_played_week(pool, mid_season, tmp_path):
     render_site(pool, mid_season, tmp_path)
-    html = (tmp_path / "weeks" / "index.html").read_text()
+    html = (tmp_path / "season" / "index.html").read_text()
     header = re.search(r"<thead>.*?</thead>", html, re.S).group(0)
     assert len(re.findall(r'class="num">\d+</th>', header)) == 11
 
@@ -469,10 +478,21 @@ def test_transition_names_are_unique_within_a_page(season, game_data, tmp_path):
     assert len(names) == len(set(names))
 
 
+def _real_pages(written):
+    """Every rendered page, minus the chrome-less forwarding stubs."""
+    for page in written:
+        if page.suffix != ".html":
+            continue
+        text = page.read_text()
+        if 'http-equiv="refresh"' in text:
+            continue
+        yield page, text
+
+
 def test_every_page_offers_the_identity_picker(season, game_data, tmp_path):
     written = render_site(season, game_data, tmp_path)
-    for page in (p for p in written if p.suffix == ".html"):
-        assert "data-me-select" in page.read_text(), page
+    for page, text in _real_pages(written):
+        assert "data-me-select" in text, page
 
 
 def test_rows_carry_the_slug_the_picker_matches_on(season, game_data, tmp_path):
@@ -501,7 +521,10 @@ def test_every_chip_that_names_a_team_is_coloured(season, game_data, tmp_path):
     render_site(season, game_data, tmp_path)
     html = (tmp_path / "teams" / "index.html").read_text()
 
-    chips = re.findall(r'<span class="team-chip[^"]*"\s*\n?\s*style="([^"]*)">([A-Z]{2,3})</span>', html)
+    chips = re.findall(
+        r'<span class="team-chip[^"]*"\s*\n?\s*style="([^"]*)">(?:<img[^>]*>)?([A-Z]{2,3})</span>',
+        html,
+    )
     assert len(chips) >= 32
     for style, team in chips:
         assert "--team-bg:" in style, f"{team} chip has no colour"
@@ -535,7 +558,7 @@ def test_the_seed_sort_key_orders_playoff_teams_first(season, game_data, tmp_pat
 # -- the comparison chart -----------------------------------------------------
 def test_the_compare_chart_offers_every_entrant(season, game_data, tmp_path):
     render_site(season, game_data, tmp_path)
-    html = (tmp_path / "trends" / "index.html").read_text()
+    html = (tmp_path / "season" / "index.html").read_text()
 
     picks = set(re.findall(r'data-pick="([\w-]+)"', html))
     lines = set(re.findall(r'<polyline class="cmp-line" data-entrant="([\w-]+)"', html))
@@ -546,7 +569,7 @@ def test_the_compare_chart_offers_every_entrant(season, game_data, tmp_path):
 def test_the_compare_chart_ships_unpicked(season, game_data, tmp_path):
     """The server does not choose for the viewer; the browser does."""
     render_site(season, game_data, tmp_path)
-    html = (tmp_path / "trends" / "index.html").read_text()
+    html = (tmp_path / "season" / "index.html").read_text()
     assert "is-picked" not in html
     assert html.count("data-compare>") == 2  # points and rank
 
@@ -558,7 +581,7 @@ def test_the_compare_chart_is_absent_before_any_games(season, tmp_path, games_20
     preseason = GameData(g, 2025, datetime.now(timezone.utc), None, "cache")
 
     render_site(season, preseason, tmp_path)
-    html = (tmp_path / "trends" / "index.html").read_text()
+    html = (tmp_path / "season" / "index.html").read_text()
     assert "data-pick=" not in html
 
 
@@ -697,8 +720,7 @@ def test_the_viewer_controls_come_before_the_content(season, game_data, tmp_path
     """
     written = render_site(season, game_data, tmp_path)
 
-    for page in (p for p in written if p.suffix == ".html"):
-        html = page.read_text()
+    for page, html in _real_pages(written):
         main_at = html.index("<main")
         assert html.index("data-me-select") < main_at, page
         assert html.index("data-tz-select") < main_at, page
@@ -764,8 +786,8 @@ def test_the_forecast_is_ordered_by_chance_of_winning(pool, mid_season, tmp_path
 
 def test_the_forecast_tab_is_in_the_nav_on_every_page(pool, mid_season, tmp_path):
     written = render_site(pool, mid_season, tmp_path, simulations=200)
-    for page in (p for p in written if p.suffix == ".html"):
-        assert "/forecast/" in page.read_text(), page
+    for page, text in _real_pages(written):
+        assert "/forecast/" in text, page
 
 
 def test_the_forecast_page_explains_itself_when_there_is_nothing_to_say(

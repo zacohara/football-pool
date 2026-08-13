@@ -28,6 +28,8 @@
     if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
     var me = localStorage.getItem('pool-me');
     if (me) document.documentElement.dataset.me = me;
+    var d = localStorage.getItem('pool-detail');
+    if (d === 'on') document.documentElement.dataset.detail = d;
   } catch (e) {}
 </script>
 
@@ -38,20 +40,20 @@
 <header class="masthead">
   <div class="wrap masthead-inner">
     <a class="brand" href="{{ '/'|url }}">
-      <span class="brand-mark" aria-hidden="true"></span>
+      <img class="brand-shield" src="{{ '/assets/logos/NFL.png'|url }}" alt="" width="22" height="22">
       <span class="brand-text">
         <span class="brand-name">Family Pool</span>
         <span class="brand-season">{{ season.year }}</span>
       </span>
     </a>
 
+    {# Three destinations, not six. What happened (Standings), how it moved
+       (Season), where it ends (Forecast). Teams and Rules are reference, and
+       reference lives in the footer. #}
     <nav class="tabs" aria-label="Sections">
       <a href="{{ '/'|url }}" {% if page == 'standings' %}aria-current="page"{% endif %}>Standings</a>
-      <a href="{{ '/weeks/'|url }}" {% if page == 'weeks' %}aria-current="page"{% endif %}>Weeks</a>
-      <a href="{{ '/trends/'|url }}" {% if page == 'trends' %}aria-current="page"{% endif %}>Trends</a>
+      <a href="{{ '/season/'|url }}" {% if page == 'season' %}aria-current="page"{% endif %}>Season</a>
       <a href="{{ '/forecast/'|url }}" {% if page == 'forecast' %}aria-current="page"{% endif %}>Forecast</a>
-      <a href="{{ '/teams/'|url }}" {% if page == 'teams' %}aria-current="page"{% endif %}>Teams</a>
-      <a href="{{ '/rules/'|url }}" {% if page == 'rules' %}aria-current="page"{% endif %}>Rules</a>
     </nav>
 
     <button class="theme-toggle" type="button" data-theme-toggle
@@ -117,6 +119,10 @@
       </p>
     </div>
 
+    <nav class="footer-nav" aria-label="Reference">
+      <a href="{{ '/teams/'|url }}">Teams</a>
+      <a href="{{ '/rules/'|url }}">Rules</a>
+    </nav>
   </div>
 </footer>
 
