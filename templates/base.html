@@ -14,6 +14,15 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="{% block og_title %}{{ season.year }} Family Pool{% endblock %}">
 <meta property="og:description" content="{% block og_description %}{{ self.description() }}{% endblock %}">
+{% if site_url %}
+{# Absolute, because link scrapers do not resolve relative URLs. The path part
+   still goes through the url filter so the card carries a content fingerprint
+   — a changed leaderboard is an image no chat app has cached. #}
+<meta property="og:image" content="{{ site_url }}{{ '/assets/card.png'|url }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+{% endif %}
 
 <link rel="icon" href="{{ '/assets/favicon.svg'|url }}" type="image/svg+xml">
 <link rel="stylesheet" href="{{ '/assets/site.css'|url }}">
@@ -80,6 +89,10 @@
         {% endfor %}
       </select>
     </label>
+    {# Some people run more than one entry. Picking a second name pins it too;
+       each chip removes its own. The container's presence is what switches the
+       picker into multi mode — markup opts in, script degrades without it. #}
+    <span class="me-chips" data-me-chips hidden></span>
     {% endif %}
 
     <label class="tz">

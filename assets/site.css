@@ -1203,7 +1203,7 @@ html:not([data-detail='on']) .board .row {
 /* --- the viewer's own line ----------------------------------------------
    Filled by the client once "who are you?" is set. Answers "how am I doing"
    before a single scroll. */
-.you-strip { margin: 0 0 0.9rem; }
+.you-strip { display: flex; flex-direction: column; gap: 0.45rem; margin: 0 0 0.9rem; }
 .you-strip a {
   display: flex;
   align-items: baseline;
@@ -1235,6 +1235,26 @@ html:not([data-detail='on']) .board .row {
 }
 .you-strip .you-pts { margin-left: auto; font-weight: 600; }
 
+
+/* --- pinned identities ---------------------------------------------------
+   One chip per pinned entry beside the picker; each removes its own. */
+.me-chips { display: inline-flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; }
+.me-chip {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--chalk);
+  background: var(--surface-2);
+  border: 1px solid color-mix(in srgb, var(--live) 35%, var(--rule));
+  border-radius: 999px;
+  padding: 0.3rem 0.6rem;
+  min-height: 28px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.me-chip:hover { border-color: var(--live); }
+.me-chip:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
+
 /* --- reference lives in the footer -------------------------------------- */
 .footer-nav { display: flex; gap: 0.4rem; }
 .footer-nav a {
@@ -1253,6 +1273,7 @@ html:not([data-detail='on']) .board .row {
   .brand-shield { width: 19px; height: 19px; }
   .detail-toggle { top: 0.1rem; padding: 0.4rem 0.75rem; }
   .you-strip a { font-size: 0.72rem; gap: 0.55rem; flex-wrap: wrap; }
+  .me-chips { flex-basis: 100%; }
   /* Tap targets: the tab row and footer links go to a comfortable height. */
   .tabs a { padding: 0.6rem 0.55rem; font-size: 0.74rem; }
   .footer-nav a { padding: 0.6rem 0.55rem; }

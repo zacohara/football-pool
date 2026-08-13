@@ -478,6 +478,26 @@ def test_transition_names_are_unique_within_a_page(season, game_data, tmp_path):
     assert len(names) == len(set(names))
 
 
+# -- the link preview ---------------------------------------------------------
+def test_the_share_card_is_generated_and_copied_out(season, game_data, tmp_path):
+    render_site(season, game_data, tmp_path)
+    assert (tmp_path / "assets" / "card.png").exists()
+
+
+def test_og_image_is_absolute_and_only_present_with_a_site_url(season, game_data, tmp_path):
+    """Link scrapers do not resolve relative URLs, so a preview without an
+    origin would be worse than none. The tag also carries the card's content
+    fingerprint, so a changed leaderboard is an image no chat app has cached."""
+    render_site(season, game_data, tmp_path, site_url="https://example.github.io/")
+    html = (tmp_path / "index.html").read_text()
+    m = re.search(r'property="og:image" content="([^"]+)"', html)
+    assert m, "og:image missing despite a site_url"
+    assert m.group(1).startswith("https://example.github.io/assets/card.png?v=")
+
+    render_site(season, game_data, tmp_path)
+    assert 'og:image' not in (tmp_path / "index.html").read_text()
+
+
 def _real_pages(written):
     """Every rendered page, minus the chrome-less forwarding stubs."""
     for page in written:

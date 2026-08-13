@@ -10,6 +10,8 @@ config.yaml, so pinning a past year is just ``--season 2026``.
 
 from __future__ import annotations
 
+import os
+
 import argparse
 import sys
 from pathlib import Path
@@ -122,6 +124,21 @@ def cmd_check_lf(args) -> int:
     return 0
 
 
+def default_site_url(env: dict) -> str:
+    """The Pages origin, derived from the Actions environment.
+
+    ``--site-url`` always wins. Without it, a build running in GitHub Actions
+    can still name its own origin — ``owner/repo`` becomes
+    ``https://owner.github.io`` — which is exactly where a project Pages site
+    lives. A custom domain is the one case this gets wrong, and that is what
+    the explicit flag is for. Outside Actions there is no origin to derive, so
+    the preview image tag simply stays off, same as before.
+    """
+    repo = env.get("GITHUB_REPOSITORY", "")
+    owner = repo.split("/")[0] if "/" in repo else ""
+    return f"https://{owner}.github.io" if owner else ""
+
+
 def cmd_build(args) -> int:
     from .render import render_site
 
@@ -160,7 +177,10 @@ def cmd_build(args) -> int:
     # A project site lives at https://<user>.github.io/<repo>/, so every URL
     # needs that prefix. CI passes it in; locally the default of "" is right
     # because a preview server serves from the root.
-    written = render_site(season, gd, out, base=args.base)
+    written = render_site(
+        season, gd, out, base=args.base,
+        site_url=args.site_url or default_site_url(os.environ),
+    )
 
     pages = sum(1 for p in written if p.suffix == ".html")
     print(f"built {pages} pages for {season.year} -> {out}")
@@ -216,6 +236,12 @@ def main(argv: list[str] | None = None) -> int:
         "--base",
         default="",
         help="deployment path prefix, e.g. /football-pool (default: site root)",
+    )
+    build.add_argument(
+        "--site-url",
+        default="",
+        help="absolute origin for link previews, e.g. https://user.github.io "
+        "(default: no preview image tag)",
     )
 
     args = ap.parse_args(argv)

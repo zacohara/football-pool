@@ -37,6 +37,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from . import history as history_mod
 from . import metrics
+from . import sharecard
 from . import svg
 from . import teamcolors
 from .nflverse import GameData
@@ -486,6 +487,7 @@ def render_site(
     out_dir: Path,
     base: str = "",
     simulations: int | None = None,
+    site_url: str = "",
 ) -> list[Path]:
     """Render every page into ``out_dir``. Returns the files written."""
     ctx = build_context(season, data, simulations=simulations)
@@ -499,6 +501,7 @@ def render_site(
 
     shared = {
         "season": season,
+        "site_url": site_url.rstrip("/"),
         "state": state,
         "fresh": fresh,
         "rows": rows,
@@ -509,6 +512,21 @@ def render_site(
         "sim_count": ctx.projections.simulations if ctx.projections else 0,
         "forecast": _forecast(ctx),
     }
+
+    # The link-preview card, drawn from the same numbers the pages get. It is
+    # written into the asset directory *before* any template renders so the
+    # ``url`` filter fingerprints it — a changed leaderboard becomes a URL no
+    # chat app has cached. Never fatal: a preview must not cost the family
+    # their scoreboard. The file is generated, not committed (.gitignore), and
+    # only when the asset directory exists at all — a build with no assets is
+    # already degraded, and resurrecting the directory for a preview image
+    # would turn "assets are missing" into "assets are mysteriously back".
+    if ASSET_DIR.is_dir():
+        try:
+            content = sharecard.card_content(state, rows, shared["forecast"])
+            sharecard.draw_card(ASSET_DIR / "card.png", year=season.year, **content)
+        except Exception as e:  # noqa: BLE001 - a preview failure must not break the site
+            warnings.warn(f"share card unavailable: {e}", RuntimeWarning, stacklevel=2)
 
     out_dir.mkdir(parents=True, exist_ok=True)
 

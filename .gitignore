@@ -14,3 +14,6 @@ __pycache__/
 .ruff_cache/
 .coverage
 
+
+# Generated at build time by sharecard.py — never committed
+assets/card.png

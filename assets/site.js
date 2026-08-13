@@ -223,53 +223,113 @@ function initDetail(doc, storage) {
  * links of its own, it borrows the row's. Empty (and hidden) until "who are
  * you?" is set, and on every page that has no board.
  */
-function paintYouStrip(doc, slug) {
+function paintYouStrip(doc, slugs) {
   const strip = doc.querySelector('[data-you]');
   if (!strip) return;
 
-  const row = slug ? doc.querySelector(`.board .row[data-slug="${slug}"]`) : null;
+  const rows = slugs
+    .map((slug) => doc.querySelector(`.board .row[data-slug="${slug}"]`))
+    .filter(Boolean);
   strip.textContent = '';
-  strip.hidden = !row;
-  if (!row) return;
+  strip.hidden = !rows.length;
+  if (!rows.length) return;
 
-  const grab = (sel) => {
-    const el = row.querySelector(sel);
-    return el ? el.textContent.trim() : '';
-  };
+  for (const row of rows) {
+    const grab = (sel) => {
+      const el = row.querySelector(sel);
+      return el ? el.textContent.trim() : '';
+    };
 
-  const link = doc.createElement('a');
-  link.href = row.getAttribute('href');
+    const link = doc.createElement('a');
+    link.href = row.getAttribute('href');
 
-  const rank = doc.createElement('span');
-  rank.className = 'you-rank';
-  rank.textContent = `#${grab('.row-rank')}`;
+    const rank = doc.createElement('span');
+    rank.className = 'you-rank';
+    rank.textContent = `#${grab('.row-rank')}`;
 
-  const label = doc.createElement('span');
-  label.className = 'you-label';
-  label.textContent = 'your entry';
+    const label = doc.createElement('span');
+    label.className = 'you-label';
+    label.textContent = rows.length > 1 ? 'your entries' : 'your entry';
 
-  const name = doc.createElement('span');
-  name.textContent = grab('.row-name');
+    const name = doc.createElement('span');
+    name.textContent = grab('.row-name');
 
-  const pts = doc.createElement('span');
-  pts.className = 'you-pts';
-  pts.textContent = `${grab('.row-points')} pts`;
+    const pts = doc.createElement('span');
+    pts.className = 'you-pts';
+    pts.textContent = `${grab('.row-points')} pts`;
 
-  link.append(rank, label, name, pts);
-  strip.append(link);
+    link.append(rank, label, name, pts);
+    strip.append(link);
+  }
 }
+
+export const ME_LIMIT = 4;
 
 function initMe(doc, storage) {
   const select = doc.querySelector('[data-me-select]');
+  const chips = doc.querySelector('[data-me-chips]');
   const stored = storage.get(ME_KEY) || '';
 
-  const apply = (slug) => {
-    doc.documentElement.dataset.me = slug;
+  const apply = (slugs) => {
+    doc.documentElement.dataset.me = slugs.join(' ');
     for (const el of doc.querySelectorAll('[data-slug]')) {
-      el.classList.toggle('is-me', Boolean(slug) && el.dataset.slug === slug);
+      el.classList.toggle('is-me', slugs.includes(el.dataset.slug));
     }
-    paintYouStrip(doc, slug);
+    paintYouStrip(doc, slugs);
   };
+
+  // Multi mode: the chips container in the markup opts in. Some people run
+  // more than one entry, so picking a second name pins it alongside the
+  // first. The stored value stays the same key, space-separated — a value
+  // written by the old single picker reads back as a one-entry list.
+  if (select && chips) {
+    const known = new Set(
+      Array.from(select.options).map((o) => o.value).filter(Boolean),
+    );
+    const names = new Map(
+      Array.from(select.options).map((o) => [o.value, o.textContent.trim()]),
+    );
+    let picked = stored.split(' ').filter((s) => known.has(s)).slice(0, ME_LIMIT);
+
+    const paint = () => {
+      chips.textContent = '';
+      chips.hidden = !picked.length;
+      for (const slug of picked) {
+        const chip = doc.createElement('button');
+        chip.type = 'button';
+        chip.className = 'me-chip';
+        chip.setAttribute('aria-label', `Stop pinning ${names.get(slug) || slug}`);
+        chip.textContent = `${names.get(slug) || slug} ×`;
+        chip.addEventListener('click', () => {
+          picked = picked.filter((s) => s !== slug);
+          storage.set(ME_KEY, picked.join(' '));
+          apply(picked);
+          paint();
+        });
+        chips.append(chip);
+      }
+      select.value = '';
+    };
+
+    apply(picked);
+    paint();
+    if (picked.join(' ') !== stored) storage.set(ME_KEY, picked.join(' '));
+
+    select.addEventListener('change', () => {
+      const slug = select.value;
+      // Choosing "Nobody in particular" clears the lot, same as it always did.
+      picked = slug
+        ? [...picked.filter((s) => s !== slug), slug].slice(-ME_LIMIT)
+        : [];
+      storage.set(ME_KEY, picked.join(' '));
+      apply(picked);
+      paint();
+    });
+    return;
+  }
+
+  // Legacy single mode: pages rendered without the chips container.
+  const applyOne = (slug) => apply(slug ? [slug] : []);
 
   if (select) {
     // A stored name that is no longer in the pool must not leave the picker
@@ -277,16 +337,16 @@ function initMe(doc, storage) {
     // entrants in it.
     select.value = stored;
     const slug = select.value === stored ? stored : '';
-    apply(slug);
+    applyOne(slug);
     if (slug !== stored) storage.set(ME_KEY, slug);
 
     select.addEventListener('change', () => {
       storage.set(ME_KEY, select.value);
-      apply(select.value);
+      applyOne(select.value);
     });
     return;
   }
-  apply(stored);
+  applyOne(stored);
 }
 
 /**
@@ -304,9 +364,11 @@ function initCompare(doc, storage) {
   const stored = (storage.get(COMPARE_KEY) || '').split(' ').filter(Boolean);
   const me = doc.documentElement.dataset.me;
 
-  // Nothing stored yet, but they have told us who they are: start on them.
+  // Nothing stored yet, but they have told us who they are: start on them —
+  // every pinned entry, so someone running two lineups opens on both lines.
   // Opening the page already showing your own line is the point of the chart.
-  let picked = (stored.length ? stored : (me ? [me] : [])).filter((s) => known.has(s));
+  const mine = (me || '').split(' ').filter(Boolean);
+  let picked = (stored.length ? stored : mine).filter((s) => known.has(s));
 
   const empty = doc.querySelector('[data-compare-empty]');
 

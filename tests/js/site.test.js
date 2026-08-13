@@ -12,6 +12,7 @@ import {
   DEFAULT_THEME,
   DEFAULT_TZ,
   ME_KEY,
+  ME_LIMIT,
   PICK_COLORS,
   THEME_KEY,
   TZ_KEY,
@@ -442,6 +443,102 @@ describe('this is me', () => {
     document.body.innerHTML = '<a class="row" data-slug="brian-moore"></a>';
     init(document, fakeWindow({ store: new Map([[ME_KEY, 'brian-moore']]) }));
     expect(document.querySelector('[data-slug="brian-moore"]').classList.contains('is-me')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// This is me — multi mode
+// ---------------------------------------------------------------------------
+function multiBoardMarkup() {
+  boardMarkup();
+  // The chips container is what opts the picker into multi mode, and the
+  // strip is where the pinned entries surface. Rows mirror the real board.
+  document.body.innerHTML = `
+    <div class="you-strip" data-you hidden></div>
+    <div class="board">
+      <a class="row" data-slug="brian-moore" href="/entrant/brian-moore/">
+        <span class="row-rank">1</span><span class="row-name">Brian Moore</span>
+        <span class="row-points">10.00</span>
+        <span class="badge you" data-me-only>you</span>
+      </a>
+      <a class="row" data-slug="paul-moore" href="/entrant/paul-moore/">
+        <span class="row-rank">2</span><span class="row-name">Paul Moore</span>
+        <span class="row-points">8.00</span>
+        <span class="badge you" data-me-only>you</span>
+      </a>
+    </div>
+    <select data-me-select>
+      <option value="">Nobody in particular</option>
+      <option value="brian-moore">Brian Moore</option>
+      <option value="paul-moore">Paul Moore</option>
+    </select>
+    <span class="me-chips" data-me-chips hidden></span>`;
+}
+
+describe('this is me, running two entries', () => {
+  beforeEach(multiBoardMarkup);
+
+  test('picking a second name pins it alongside the first', () => {
+    const win = fakeWindow();
+    init(document, win);
+    const select = document.querySelector('[data-me-select]');
+
+    select.value = 'brian-moore';
+    select.dispatchEvent(new window.Event('change'));
+    select.value = 'paul-moore';
+    select.dispatchEvent(new window.Event('change'));
+
+    expect(document.querySelectorAll('.row.is-me')).toHaveLength(2);
+    expect(win._store.get(ME_KEY)).toBe('brian-moore paul-moore');
+    expect(document.documentElement.dataset.me).toBe('brian-moore paul-moore');
+    // The picker itself sits back on the placeholder; the chips carry state.
+    expect(select.value).toBe('');
+  });
+
+  test('the strip shows one line per pinned entry, borrowing the board rows', () => {
+    init(document, fakeWindow({ store: new Map([[ME_KEY, 'brian-moore paul-moore']]) }));
+    const strip = document.querySelector('[data-you]');
+    expect(strip.hidden).toBe(false);
+    expect(strip.querySelectorAll('a')).toHaveLength(2);
+    expect(strip.textContent).toContain('your entries');
+    expect(strip.querySelector('a').getAttribute('href')).toBe('/entrant/brian-moore/');
+  });
+
+  test("a chip's own button unpins it and repaints everything", () => {
+    const win = fakeWindow({ store: new Map([[ME_KEY, 'brian-moore paul-moore']]) });
+    init(document, win);
+
+    const chips = document.querySelectorAll('.me-chip');
+    expect(chips).toHaveLength(2);
+    chips[0].click();
+
+    expect(win._store.get(ME_KEY)).toBe('paul-moore');
+    expect(document.querySelectorAll('.row.is-me')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-you] a')).toHaveLength(1);
+  });
+
+  test('choosing nobody clears every pin, same as it always did', () => {
+    const win = fakeWindow({ store: new Map([[ME_KEY, 'brian-moore paul-moore']]) });
+    init(document, win);
+
+    const select = document.querySelector('[data-me-select]');
+    select.value = '';
+    select.dispatchEvent(new window.Event('change'));
+
+    expect(document.querySelectorAll('.is-me')).toHaveLength(0);
+    expect(win._store.get(ME_KEY)).toBe('');
+    expect(document.querySelector('[data-you]').hidden).toBe(true);
+  });
+
+  test('a departed entrant is dropped from a stored multi value', () => {
+    const win = fakeWindow({ store: new Map([[ME_KEY, 'brian-moore someone-who-left']]) });
+    init(document, win);
+    expect(win._store.get(ME_KEY)).toBe('brian-moore');
+    expect(document.querySelectorAll('.row.is-me')).toHaveLength(1);
+  });
+
+  test('the pin count is capped', () => {
+    expect(ME_LIMIT).toBeGreaterThan(1);
   });
 });
 
