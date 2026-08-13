@@ -90,15 +90,25 @@ export function countUpValue(target, progress) {
  * Two people finishing a week on the same score put their labels in exactly the
  * same place. The markers stay on the true values; only the text moves.
  */
-export function spreadLabels(items, gap = 14) {
+export function spreadLabels(items, gap = 14, top = -Infinity, bottom = Infinity) {
   let previous = -Infinity;
-  return [...items]
+  const placed = [...items]
     .sort((a, b) => a.y - b.y)
     .map(({ slug, y }) => {
-      const placed = Math.max(y, previous + gap);
-      previous = placed;
-      return { slug, y: placed };
+      const yOut = Math.max(y, previous + gap);
+      previous = yOut;
+      return { slug, y: yOut };
     });
+
+  // If the stack overflowed the plot, slide the whole run back up — the same
+  // correction the Python `_spread` has always applied. Without it, labels for
+  // lines finishing near the chart bottom were pushed past the viewBox and
+  // clipped invisible.
+  if (placed.length && bottom < Infinity && placed[placed.length - 1].y > bottom) {
+    const shift = Math.min(placed[placed.length - 1].y - bottom, placed[0].y - top);
+    if (shift > 0) return placed.map((p) => ({ slug: p.slug, y: p.y - shift }));
+  }
+  return placed;
 }
 
 /**
@@ -321,8 +331,15 @@ function initCompare(doc, storage) {
       }
 
       const labels = Array.from(chart.querySelectorAll('.cmp-label.is-picked'));
+      // Bounds from the chart's own viewBox (14 top pad, 26 bottom pad —
+      // matching the Python renderer), so an overflowing label stack slides
+      // back into view instead of clipping.
+      const box = chart.querySelector('svg')?.viewBox?.baseVal;
       const placed = spreadLabels(
         labels.map((el) => ({ slug: el.dataset.entrant, y: Number(el.dataset.y) })),
+        14,
+        box ? 14 : -Infinity,
+        box ? box.height - 26 : Infinity,
       );
       for (const { slug, y } of placed) {
         const el = chart.querySelector(`.cmp-label[data-entrant="${slug}"]`);
@@ -359,9 +376,16 @@ function initSort(doc) {
       const activate = () => {
         const index = Array.from(th.parentElement.children).indexOf(th);
         // First click on a column sorts the way that column is most useful:
-        // biggest-first for numbers, A-Z for names.
-        const wasAscending = th.getAttribute('aria-sort') === 'ascending';
-        const direction = wasAscending ? -1 : 1;
+        // biggest-first for numbers (headings the templates mark `num`),
+        // A-Z for names. Previously this comment described behaviour the
+        // code never had — every column opened ascending.
+        const current = th.getAttribute('aria-sort');
+        let direction;
+        if (current === null) {
+          direction = th.classList.contains('num') ? -1 : 1;
+        } else {
+          direction = current === 'ascending' ? -1 : 1;
+        }
 
         for (const other of heads) other.removeAttribute('aria-sort');
         th.setAttribute('aria-sort', direction === 1 ? 'ascending' : 'descending');
@@ -395,10 +419,12 @@ function initTimeZone(doc, storage) {
   };
 
   if (select) {
+    // A valid stored zone that is not one of the listed options (an old
+    // build's list, or a hand-set value) still applies to every timestamp;
+    // only the <select> shows blank. The previous code did the opposite of
+    // its own comment — it read the emptied select back and snapped the
+    // viewer to Eastern.
     select.value = zone;
-    // A zone we do not list (someone's stored value, or a future edit) should
-    // still apply rather than silently snapping back to Eastern.
-    if (select.value !== zone) zone = select.value || DEFAULT_TZ;
     select.addEventListener('change', () => {
       zone = select.value;
       storage.set(TZ_KEY, zone);

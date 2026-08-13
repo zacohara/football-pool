@@ -41,7 +41,7 @@
                 style="{{ t.team|chip_style }}"><img class="chip-logo chip-logo-lg" src="{{ ('/assets/logos/' ~ t.team ~ '.png')|url }}" alt="" width="18" height="18">{{ t.team }}</span>
         </th>
         <td class="num" data-value="{{ t.lf }}">{{ '%.2f'|format(t.lf) }}</td>
-        <td data-value="{{ t.w }}">{{ t.record }}</td>
+        <td data-value="{{ '%.4f'|format(t.win_pct) }}">{{ t.record }}</td>
         <td class="num" data-value="{{ t.points }}">{{ t.points|points }}</td>
         <td data-value="{{ t.seed if t.seed else 99 }}">
           {% if t.seed %}

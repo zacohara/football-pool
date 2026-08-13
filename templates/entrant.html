@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}{{ entrant.name }} · {{ season.year }} Family Pool{% endblock %}
-{% block description %}{{ entrant.name }} is {{ entrant.rank }}{{ 'st' if entrant.rank == 1 else ('nd' if entrant.rank == 2 else ('rd' if entrant.rank == 3 else 'th')) }} with {{ entrant.banked|points }} points from {{ entrant.teams|join(', ') }}.{% endblock %}
+{% block description %}{{ entrant.name }} is {{ entrant.rank|ordinal }} with {{ entrant.banked|points }} points from {{ entrant.teams|join(', ') }}.{% endblock %}
 
 {% block content %}
 
@@ -115,7 +115,7 @@
     <p class="stat-note">
       {{ entrant.projection.band|safe }}
       {{ '%.0f'|format(entrant.projection.p10) }}–{{ '%.0f'|format(entrant.projection.p90) }}
-      in nine seasons out of ten
+      in eight seasons out of ten
     </p>
   </div>
 </div>

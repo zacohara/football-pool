@@ -20,10 +20,15 @@
 
 {% if not forecast %}
   <p class="empty">
-    {% if state.games_remaining %}
+    {% if state.reg_games_remaining %}
       No forecast is configured for {{ season.year }}. Add win totals to
       <code>seasons/{{ season.year }}/forecast.yaml</code>, or set
       <code>enabled: false</code> to leave this page out on purpose.
+    {% elif state.games_remaining %}
+      The regular season is in the books, and the model only simulates
+      regular-season games — from here the
+      <a href="{{ '/'|url }}">standings</a>, each entry's ceiling, and the
+      bracket itself tell the story.
     {% else %}
       The season is over — there is nothing left to simulate. The
       <a href="{{ '/'|url }}">standings</a> are the final word now.

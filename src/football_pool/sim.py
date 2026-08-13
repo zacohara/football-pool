@@ -161,8 +161,8 @@ def fit_elo(
         ]
     )
 
-    for _ in range(iterations):
-        diff = (elo[home] - elo[away] + cfg.home_field_elo)[:, None] + offsets
+    def expected_wins(ratings: np.ndarray) -> np.ndarray:
+        diff = (ratings[home] - ratings[away] + cfg.home_field_elo)[:, None] + offsets
         p = (
             states[0] * win_prob(diff, cfg.elo_scale)
             + states[1] * win_prob(diff - drop_h, cfg.elo_scale)
@@ -170,13 +170,17 @@ def fit_elo(
             + states[3] * win_prob(diff - drop_h + drop_a, cfg.elo_scale)
         )
         p = p @ weights
-        expected = np.bincount(home, p, season.n_teams) + np.bincount(
+        return np.bincount(home, p, season.n_teams) + np.bincount(
             away, 1 - p, season.n_teams
         )
-        elo += learning_rate * (target - expected)
+
+    for _ in range(iterations):
+        elo += learning_rate * (target - expected_wins(elo))
         elo -= elo.mean() - 1500.0
 
-    return elo, expected
+    # Recomputed from the *final* ratings. The loop variable was one update
+    # stale — the returned diagnostics did not correspond to the returned elo.
+    return elo, expected_wins(elo)
 
 
 def playoff_field(season: Season, wins: np.ndarray, jitter: np.ndarray) -> np.ndarray:
@@ -237,11 +241,15 @@ def sim_playoffs(
     n = seeds.shape[0]
     rows = np.arange(n)
 
-    def play(a, home_side, u, neutral=False):
+    def play(home, away, u, neutral=False):
+        # Home-field Elo goes to the first argument — the higher seed, which
+        # every caller passes first. (The parameter previously named
+        # ``home_side`` was actually the away team; the maths was right, the
+        # name was a landmine.)
         diff = (
-            elo[rows, a] - elo[rows, home_side] + (0.0 if neutral else cfg.home_field_elo)
+            elo[rows, home] - elo[rows, away] + (0.0 if neutral else cfg.home_field_elo)
         ) * cfg.playoff_elo_multiplier
-        return np.where(u < win_prob(diff, cfg.elo_scale), a, home_side)
+        return np.where(u < win_prob(diff, cfg.elo_scale), home, away)
 
     col = 0
     champions = []

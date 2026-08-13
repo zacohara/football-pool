@@ -128,11 +128,11 @@
 {% endif %}
 
 {% if state.week_leaders %}
-<h2 class="section-title">Best of week {{ state.week }}</h2>
+<h2 class="section-title">Best of week {{ state.scored_week }}</h2>
 <div class="stat-grid">
   {% for name, pts in state.week_leaders %}
   <div class="stat">
-    <p class="stat-label">{{ loop.index }}{{ 'st' if loop.index == 1 else ('nd' if loop.index == 2 else 'rd') }} this week</p>
+    <p class="stat-label">{{ loop.index|ordinal }} this week</p>
     <p class="stat-value live">{{ '%.2f'|format(pts) }}</p>
     <p class="stat-note">{{ name }}</p>
   </div>

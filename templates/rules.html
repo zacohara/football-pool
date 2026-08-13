@@ -48,7 +48,7 @@
       <tr>
         <th scope="row">Regular-season tie</th>
         <td class="num">{{ season.tie_multiplier }} × LF</td>
-        <td>an NFL game can end level; it pays half a win</td>
+        <td>an NFL game can end level{% if season.tie_multiplier %}; it pays that fraction of a win{% else %}; this season it pays nothing{% endif %}</td>
       </tr>
       <tr>
         <th scope="row">Division winner</th>

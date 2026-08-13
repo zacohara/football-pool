@@ -137,12 +137,25 @@ class GameData:
 
         A rescheduled game is not counted — nflverse moves ``gameday`` forward
         when a game is postponed, so it stops being in the past.
+
+        A *cancelled* game is not counted either, and cannot be, by a
+        different route: a game that is never made up (Buffalo–Cincinnati,
+        January 2023) keeps its date and a null result forever. Counting it
+        overdue would have this guard refusing to publish from two days after
+        the cancellation until the end of the season — including all of
+        January. The tell is the frontier: staleness means the feed stopped
+        delivering, so a missing result *behind* newer completed games is a
+        hole in the schedule, not a stall in the feed. Only games overdue past
+        the most recent completed game count.
         """
         asof = pd.Timestamp(self.fetched_at.astimezone(SCHEDULE_TZ).date())
         gameday = pd.to_datetime(self.games["gameday"])
         outstanding = gameday[~self.games["played"]]
 
         overdue = outstanding[outstanding < asof]
+        played_days = gameday[self.games["played"]]
+        if not played_days.empty:
+            overdue = overdue[overdue > played_days.max()]
         if not overdue.empty:
             return int((asof - overdue.min()).days)
 

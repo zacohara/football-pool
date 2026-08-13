@@ -54,9 +54,13 @@ def cmd_fetch(args) -> int:
 
 def cmd_standings(args) -> int:
     from .scoring import entrant_scores, money_if_season_ended, score_teams
+    from .standings import final_seeds
 
     season, gd = _load(args)
-    tp = score_teams(season, gd.games)
+    # Without the seeds, the terminal leaderboard never awarded the +3.0
+    # division and +1.5 wild-card bonuses — it disagreed with the site all
+    # January, by up to two division winners per entry.
+    tp = score_teams(season, gd.games, final_seeds(season, gd.games))
     st = entrant_scores(season, tp)
     st["money"] = money_if_season_ended(season, st)
 

@@ -130,6 +130,17 @@ describe('spreadLabels', () => {
   test('an empty set is fine', () => {
     expect(spreadLabels([], 14)).toEqual([]);
   });
+
+  test('an overflowing stack slides back up into the plot', () => {
+    // 90/95/100 with a 14px gap fan to 90/104/118; a 110px floor slides the
+    // run up by 8 so the last label stays inside the viewBox instead of
+    // clipping — the correction the Python renderer always had.
+    const out = spreadLabels(
+      [{ slug: 'a', y: 90 }, { slug: 'b', y: 95 }, { slug: 'c', y: 100 }],
+      14, 10, 110,
+    );
+    expect(out.map((o) => o.y)).toEqual([82, 96, 110]);
+  });
 });
 
 describe('table sorting', () => {
@@ -296,6 +307,16 @@ describe('init', () => {
     const store = new Map([[TZ_KEY, 'Mars/Olympus']]);
     init(document, fakeWindow({ store }));
     expect(document.querySelector('[data-tz-select]').value).toBe(DEFAULT_TZ);
+  });
+
+  test('a valid zone missing from the list still applies', () => {
+    // The select honestly shows no choice, but the stamps render in the
+    // stored zone — previously this snapped the viewer back to Eastern and
+    // overwrote their stored preference with the emptied select.
+    const store = new Map([[TZ_KEY, 'Europe/Berlin']]);
+    init(document, fakeWindow({ store }));
+    expect(document.querySelector('[data-tz-select]').value).toBe('');
+    expect(store.get(TZ_KEY)).toBe('Europe/Berlin');
   });
 
   test('the odometer settles on the true value', () => {
@@ -595,6 +616,22 @@ describe('sortable table headers', () => {
 
     expect(column(1)).toEqual(['30.00', '12.00', '4.00']);
     expect(th.getAttribute('aria-sort')).toBe('descending');
+  });
+
+  test('a numeric column opens biggest-first', () => {
+    // Templates mark number columns with class="num"; those lead with the
+    // biggest value — a points column is useless smallest-first.
+    document.querySelectorAll('th[data-sort]')[1].classList.add('num');
+    init(document, fakeWindow());
+    const th = document.querySelectorAll('th[data-sort]')[1];
+    th.click();
+
+    expect(column(1)).toEqual(['30.00', '12.00', '4.00']);
+    expect(th.getAttribute('aria-sort')).toBe('descending');
+
+    th.click();
+    expect(column(1)).toEqual(['4.00', '12.00', '30.00']);
+    expect(th.getAttribute('aria-sort')).toBe('ascending');
   });
 
   test('sorting a different column clears the previous marker', () => {

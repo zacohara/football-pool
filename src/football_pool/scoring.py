@@ -78,6 +78,17 @@ def score_playoffs(season: Season, games: pd.DataFrame) -> np.ndarray:
     for row in po.itertuples():
         flat, add_lf = stages[row.game_type]
         if row.game_type == "WC":
+            # The shortcut below only holds when the higher seed actually
+            # hosts. A neutral-site or relocated wild-card game breaks it
+            # silently, so refuse to guess: the build fails loudly and
+            # yesterday's correct site stays live until the scoring is fixed.
+            location = getattr(row, "location", "Home")
+            if pd.notna(location) and str(location) != "Home":
+                raise ValueError(
+                    f"wild-card game {row.game_id} is at a neutral site "
+                    f"({location!r}) — the home-team-is-a-division-winner "
+                    f"shortcut no longer holds; score this round from seeds."
+                )
             # Only an away (wild-card) win scores.
             if not row.away_won:
                 continue

@@ -73,10 +73,24 @@ def test_final_seeds_are_withheld_until_the_season_ends(season, games_2025):
     assert regular_season_complete(games_2025)
     assert final_seeds(season, games_2025) is not None
 
-    partial = games_2025.copy()
+    # Mid-season the way it actually looks upstream: week 18 unplayed AND no
+    # playoff rows yet — nflverse does not publish the bracket until the field
+    # is set, so a file cannot carry played playoff games ahead of week 18.
+    partial = games_2025[games_2025["game_type"] == "REG"].copy()
     partial.loc[partial["week"] == 18, "played"] = False
     assert not regular_season_complete(partial)
     assert final_seeds(season, partial) is None
+
+
+def test_a_cancelled_game_does_not_hold_the_berth_bonuses_hostage(season, games_2025):
+    """Buffalo–Cincinnati, January 2023: one REG game keeps a null result
+    forever. Once the bracket rows exist the berths are decided by
+    definition, and the +3.0/+1.5 bonuses must bank."""
+    cancelled = games_2025.copy()
+    one = cancelled[cancelled["game_type"] == "REG"].index[40]
+    cancelled.loc[one, "played"] = False
+    assert regular_season_complete(cancelled)  # bracket rows exist
+    assert final_seeds(season, cancelled) is not None
 
 
 def test_seeds_are_still_projectable_mid_season(season, games_2025):

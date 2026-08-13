@@ -92,7 +92,9 @@ def movers(history: pd.DataFrame, top: int = 3) -> dict[str, list[tuple[str, flo
     change = (history[prev] - history[last]).sort_values(ascending=False)
 
     risers = [(n, float(v)) for n, v in change.items() if v > 0][:top]
-    fallers = [(n, float(v)) for n, v in change.items() if v < 0][-top:]
+    # Reversed so the biggest fall leads, mirroring the risers — the previous
+    # tail-slice kept the right names but presented them smallest drop first.
+    fallers = [(n, float(v)) for n, v in change.items() if v < 0][-top:][::-1]
     return {"risers": risers, "fallers": fallers}
 
 
@@ -103,4 +105,6 @@ def week_leaders(season: Season, history: pd.DataFrame, top: int = 3) -> list[tu
     if not weeks:
         return []
     last = deltas[f"w{weeks[-1]}"].sort_values(ascending=False)
+    # A thin week must not crown a 0.00 "leader" — an empty panel is honest.
+    last = last[last > 0]
     return [(n, float(v)) for n, v in last.head(top).items()]
